@@ -5941,16 +5941,22 @@ class LotteryPredictionWindow(QMainWindow):
             # 期号
             item_period = QTableWidgetItem(str(record.get('period', '?')))
             item_period.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_period.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 0, item_period)
             # 日期
             item_date = QTableWidgetItem(record.get('date', '?'))
             item_date.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_date.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 1, item_date)
-            # 正码
+            # 正码（每个数字带对应颜色）
             numbers = record.get('numbers', [])
-            numbers_str = ' '.join(str(n).zfill(2) for n in numbers)
+            numbers_str = '  '.join(str(n).zfill(2) for n in numbers)
             item_numbers = QTableWidgetItem(numbers_str)
             item_numbers.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # 用第一个数字的颜色作为整行前景色（避免全黑看不到）
+            if numbers:
+                first_color = LotteryConfig.get_number_color(numbers[0])
+                item_numbers.setForeground(QColor(first_color['text']))
             self.history_table.setItem(i, 2, item_numbers)
             # 特别码（带颜色标记）
             special = record.get('special', '?')
@@ -5970,18 +5976,21 @@ class LotteryPredictionWindow(QMainWindow):
             sum_val = sum(numbers) if numbers else 0
             item_sum = QTableWidgetItem(str(sum_val))
             item_sum.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_sum.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 4, item_sum)
             # 单双比
             odd_count = sum(1 for n in numbers if n % 2 == 1) if numbers else 0
             even_count = len(numbers) - odd_count
             item_oe = QTableWidgetItem(str(odd_count) + ':' + str(even_count))
             item_oe.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_oe.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 5, item_oe)
             # 大小比
             big_count = sum(1 for n in numbers if n > 24) if numbers else 0
             small_count = len(numbers) - big_count
             item_bs = QTableWidgetItem(str(big_count) + ':' + str(small_count))
             item_bs.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_bs.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 6, item_bs)
             # 颜色分布
             red_count = sum(1 for n in numbers if n in LotteryConfig.RED_NUMBERS) if numbers else 0
@@ -5989,11 +5998,13 @@ class LotteryPredictionWindow(QMainWindow):
             green_count = len(numbers) - red_count - blue_count
             item_color = QTableWidgetItem('红' + str(red_count) + '蓝' + str(blue_count) + '绿' + str(green_count))
             item_color.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_color.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 7, item_color)
             # 跨度
             span_val = (max(numbers) - min(numbers)) if numbers else 0
             item_span = QTableWidgetItem(str(span_val))
             item_span.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item_span.setForeground(QColor("#333333"))
             self.history_table.setItem(i, 8, item_span)
         self.data_count_label.setText("历史记录: " + str(len(self.historical_data)) + " 条")
         if hasattr(self, 'history_count_label'):
@@ -6197,15 +6208,15 @@ class LotteryPredictionWindow(QMainWindow):
         date = record.get('date', '?')
         
         # 构建HTML完整显示
-        html = '<div style="font-size:18px; line-height:2.2;">'
-        html += '<p style="font-size:24px; font-weight:bold; color:#3498DB;">第' + str(period) + '期  ' + str(date) + '</p>'
+        html = '<div style="font-size:20px; line-height:2.4;">'
+        html += '<p style="font-size:30px; font-weight:bold; color:#3498DB;">第' + str(period) + '期  ' + str(date) + '</p>'
         
         # 正码大按钮显示
-        html += '<p style="font-size:20px;"><b>正码：</b></p>'
+        html += '<p style="font-size:22px;"><b>正码：</b></p>'
         html += '<p style="margin-left:10px;">'
         for n in numbers:
             colors = LotteryConfig.get_number_color(n)
-            html += '<span style="display:inline-block; background-color:' + colors['border'] + '; color:#000000; font-size:24px; font-weight:bold; border-radius:10px; padding:8px 14px; margin:4px;">' + str(n).zfill(2) + '</span> '
+            html += '<span style="display:inline-block; background-color:' + colors['border'] + '; color:#FFFFFF; font-size:30px; font-weight:bold; border-radius:12px; padding:10px 18px; margin:5px;">' + str(n).zfill(2) + '</span> '
         html += '</p>'
         
         # 特别码
@@ -6220,19 +6231,19 @@ class LotteryPredictionWindow(QMainWindow):
             sp_color_name = '蓝'
         else:
             sp_color_name = '绿'
-        html += '<span style="display:inline-block; background-color:' + sp_colors['border'] + '; color:#000000; font-size:24px; font-weight:bold; border-radius:10px; padding:8px 14px; margin:4px;">' + str(special).zfill(2) + '</span>'
+        html += '<span style="display:inline-block; background-color:' + sp_colors['border'] + '; color:#FFFFFF; font-size:30px; font-weight:bold; border-radius:12px; padding:10px 18px; margin:5px;">' + str(special).zfill(2) + '</span>'
         html += '</p>'
         
         # 详细属性表
-        html += '<table style="border-collapse:collapse; width:100%; margin-top:8px; font-size:16px;">'
+        html += '<table style="border-collapse:collapse; width:100%; margin-top:8px; font-size:18px;">'
         
         # 和值
         sum_val = sum(numbers)
-        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold; width:90px;">和值</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px; font-weight:bold;">' + str(sum_val) + '</td></tr>'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold; width:90px;">和值</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:22px; font-weight:bold;">' + str(sum_val) + '</td></tr>'
         
         # 跨度
         span_val = max(numbers) - min(numbers) if numbers else 0
-        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">跨度</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px; font-weight:bold;">' + str(span_val) + '</td></tr>'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">跨度</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:22px; font-weight:bold;">' + str(span_val) + '</td></tr>'
         
         # 单双比
         odd_count = sum(1 for n in numbers if n % 2 == 1)
@@ -6248,7 +6259,7 @@ class LotteryPredictionWindow(QMainWindow):
         red_c = sum(1 for n in numbers if n in LotteryConfig.RED_NUMBERS)
         blue_c = sum(1 for n in numbers if n in LotteryConfig.BLUE_NUMBERS)
         green_c = len(numbers) - red_c - blue_c
-        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">颜色分布</td><td style="padding:6px 10px; border:1px solid #DDD;"><span style="color:#FF0000; font-size:18px;">红' + str(red_c) + '</span> <span style="color:#0000FF; font-size:18px;">蓝' + str(blue_c) + '</span> <span style="color:#008000; font-size:18px;">绿' + str(green_c) + '</span></td></tr>'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">颜色分布</td><td style="padding:6px 10px; border:1px solid #DDD;"><span style="color:#FF0000; font-size:20px;">红' + str(red_c) + '</span> <span style="color:#0000FF; font-size:20px;">蓝' + str(blue_c) + '</span> <span style="color:#008000; font-size:20px;">绿' + str(green_c) + '</span></td></tr>'
         
         # 每个号码详细属性
         html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">号码详情</td><td style="padding:6px 10px; border:1px solid #DDD;">'
@@ -6263,10 +6274,10 @@ class LotteryPredictionWindow(QMainWindow):
                 cn2 = '蓝'
             else:
                 cn2 = '绿'
-            html += '<span style="color:' + c['text'] + '; font-size:20px; font-weight:bold;">' + str(n).zfill(2) + '</span><span style="font-size:15px;">(' + cn2 + '/' + cn + '/' + el + ')</span> '
+            html += '<span style="color:' + c['text'] + '; font-size:24px; font-weight:bold;">' + str(n).zfill(2) + '</span><span style="font-size:17px;">(' + cn2 + '/' + cn + '/' + el + ')</span> '
         # 特别码详情
         sp_c = LotteryConfig.get_number_color(special)
-        html += '<br>特别码: <span style="color:' + sp_c['text'] + '; font-size:20px; font-weight:bold;">' + str(special).zfill(2) + '</span><span style="font-size:15px;">(' + sp_color_name + '/' + sp_name + '/' + sp_elem + ')</span>'
+        html += '<br>特别码: <span style="color:' + sp_c['text'] + '; font-size:24px; font-weight:bold;">' + str(special).zfill(2) + '</span><span style="font-size:17px;">(' + sp_color_name + '/' + sp_name + '/' + sp_elem + ')</span>'
         html += '</td></tr>'
         
         # 区间分布
@@ -6278,7 +6289,7 @@ class LotteryPredictionWindow(QMainWindow):
             elif n <= 40: zones['31-40'] += 1
             else: zones['41-49'] += 1
         zone_str = '  '.join(k + ':' + str(v) for k, v in zones.items())
-        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">区间分布</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:16px;">' + zone_str + '</td></tr>'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">区间分布</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px;">' + zone_str + '</td></tr>'
         
         # 尾数分布
         tails = [n % 10 for n in numbers]
@@ -6286,7 +6297,7 @@ class LotteryPredictionWindow(QMainWindow):
         for t in tails:
             tail_counter[t] = tail_counter.get(t, 0) + 1
         tail_str = '  '.join('尾' + str(k) + ':' + str(v) for k, v in sorted(tail_counter.items()))
-        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">尾数分布</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:16px;">' + tail_str + '</td></tr>'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">尾数分布</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px;">' + tail_str + '</td></tr>'
         
         # 连号
         sorted_nums = sorted(numbers)
@@ -6302,7 +6313,7 @@ class LotteryPredictionWindow(QMainWindow):
         if len(temp) >= 2:
             consec.append(temp[:])
         consec_str = '  '.join('-'.join(str(x).zfill(2) for x in c) for c in consec) if consec else '无'
-        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">连号</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:16px;">' + consec_str + '</td></tr>'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">连号</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px;">' + consec_str + '</td></tr>'
         
         html += '</table>'
         html += '</div>'
