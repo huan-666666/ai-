@@ -573,55 +573,93 @@ class PredictionAlgorithms:
     def _prepare_data(self):
         """增强的数据准备方法"""
         if not self.data:
+            # 初始化默认值防止后续访问报错
+            self._init_defaults()
             return
-        
-        # 原有基础统计
-        all_numbers = []
-        for record in self.data:
-            all_numbers.extend(record.get('numbers', []))
-        self.frequency = MathUtils.calculate_frequency(all_numbers)
-        self.missing = {}
-        for num in range(1, 50):
-            self.missing[num] = self._calculate_missing(num)
-        self.range_distribution = self._calculate_range_distribution()
-        self.tail_distribution = self._calculate_tail_distribution()
-        self.odd_even_ratio = self._calculate_odd_even_ratio()
-        self.big_small_ratio = self._calculate_big_small_ratio()
-        
-        # 新增：Pandas DataFrame构建
-        self._build_dataframe()
-        
-        # 新增：NumPy共现相关性矩阵
-        self._calculate_correlation_matrix()
-        
-        # 新增：StatsModels自相关分析
-        self._calculate_autocorrelation()
-        
-        # 新增：间隔统计特征
-        self._calculate_interval_stats()
-        
-        # 新增：连号邻号历史概率
-        self._calculate_adjacent_stats()
-        
-        # 新增：移动平均
-        self._calculate_moving_avg()
-        
-        # 新增：sklearn特征准备
-        self._prepare_sklearn_features()
-        
-        # 新增：深度NumPy矩阵运算
-        self._prepare_numpy_advanced()
-        
-        # 新增：SciPy优化和分布分析
-        self._prepare_scipy_advanced()
-        
-        # 新增：TensorFlow深度学习模型（可选）
-        if _get_tf():
-            self._prepare_tensorflow_model()
-        
-        # 新增：PyTorch LSTM时序模型（可选）
-        if _get_torch():
-            self._prepare_pytorch_lstm()
+        try:
+            # 原有基础统计
+            all_numbers = []
+            for record in self.data:
+                all_numbers.extend(record.get('numbers', []))
+            self.frequency = MathUtils.calculate_frequency(all_numbers)
+            self.missing = {}
+            for num in range(1, 50):
+                self.missing[num] = self._calculate_missing(num)
+            self.range_distribution = self._calculate_range_distribution()
+            self.tail_distribution = self._calculate_tail_distribution()
+            self.odd_even_ratio = self._calculate_odd_even_ratio()
+            self.big_small_ratio = self._calculate_big_small_ratio()
+            
+            # 新增：Pandas DataFrame构建
+            self._build_dataframe()
+            
+            # 新增：NumPy共现相关性矩阵
+            self._calculate_correlation_matrix()
+            
+            # 新增：StatsModels自相关分析
+            self._calculate_autocorrelation()
+            
+            # 新增：间隔统计特征
+            self._calculate_interval_stats()
+            
+            # 新增：连号邻号历史概率
+            self._calculate_adjacent_stats()
+            
+            # 新增：移动平均
+            self._calculate_moving_avg()
+            
+            # 新增：sklearn特征准备
+            self._prepare_sklearn_features()
+            
+            # 新增：深度NumPy矩阵运算
+            self._prepare_numpy_advanced()
+            
+            # 新增：SciPy优化和分布分析
+            self._prepare_scipy_advanced()
+            
+            # 新增：TensorFlow深度学习模型（可选）
+            if _get_tf():
+                self._prepare_tensorflow_model()
+            
+            # 新增：PyTorch LSTM时序模型（可选）
+            if _get_torch():
+                self._prepare_pytorch_lstm()
+        except Exception as e:
+            print("数据准备警告: " + str(e))
+            self._init_defaults()
+    
+    def _init_defaults(self):
+        """初始化默认值，防止后续访问属性报错"""
+        self.frequency = {}
+        self.missing = {i: 50 for i in range(1, 50)}
+        self.range_distribution = {i: 0 for i in range(5)}
+        self.tail_distribution = {i: 0 for i in range(10)}
+        self.odd_even_ratio = 0.5
+        self.big_small_ratio = 0.5
+        self.correlation_matrix = np.eye(49)
+        self.autocorrelation = {}
+        self.interval_stats = {}
+        self.adjacent_stats = {}
+        self.moving_avg = {}
+        self.sklearn_features = None
+        self.sklearn_features_scaled = None
+        self.scaler = None
+        self.kmeans_labels = None
+        self.kmeans_centers = None
+        self.np_features = None
+        self.np_regression_coeffs = np.array([0, 25])
+        self.np_predicted_missing = 25
+        self.np_histogram = np.zeros(10)
+        self.np_bin_edges = np.arange(11) * 5
+        self.np_percentiles = np.array([12.5, 25, 37.5, 45])
+        self.np_corrcoef = np.eye(7)
+        self.scipy_weights = [0.2, 0.2, 0.15, 0.15, 0.2]
+        self.ks_test_result = 0.5
+        self.scipy_smoothed = None
+        self.scipy_interp_func = lambda xi: 25.0
+        self.scipy_interp_edge = 25.0
+        self.tf_predictions = {}
+        self.tf_autoencoder = None
     
     def _prepare_numpy_advanced(self):
         """深度NumPy矩阵运算：特征向量构建、共现矩阵特征值、线性回归lstsq"""
@@ -3973,34 +4011,55 @@ class PredictionAlgorithms:
 # ============================================================================
 
 class MLPredictionModel:
-    """机器学习预测模型"""
+    """机器学习预测模型 - v6增强版"""
     
     def __init__(self, historical_data):
         self.data = historical_data
         self.models = {}
         self.scalers = {}
     
+    def _extract_window_features(self, record):
+        """从单条记录中提取窗口特征"""
+        numbers = record.get('numbers', [])
+        features = []
+        # one-hot编码
+        one_hot = [0] * 49
+        for n in numbers:
+            if 1 <= n <= 49:
+                one_hot[n - 1] = 1
+        features.extend(one_hot)
+        # 统计特征
+        if numbers:
+            features.append(sum(numbers) / 6)  # 平均值
+            features.append(max(numbers))  # 最大值
+            features.append(min(numbers))  # 最小值
+            features.append(sum(n % 2 for n in numbers))  # 单数个数
+            features.append(sum(1 for n in numbers if n > 25))  # 大号个数
+            features.append(max(numbers) - min(numbers))  # 跨度
+            # 颜色分布
+            red_c = sum(1 for n in numbers if n in LotteryConfig.RED_NUMBERS)
+            blue_c = sum(1 for n in numbers if n in LotteryConfig.BLUE_NUMBERS)
+            features.append(red_c)
+            features.append(blue_c)
+            # 尾数分布
+            tails = [n % 10 for n in numbers]
+            features.append(len(set(tails)))  # 不同尾数个数
+        else:
+            features.extend([25, 49, 1, 3, 3, 48, 2, 2, 5])
+        return features
+    
     def prepare_features(self):
+        """增强特征工程：10期滑动窗口 + 丰富统计特征"""
         if len(self.data) < 20:
             return np.array([]), np.array([])
         X = []
         y = []
-        window_size = 5
+        window_size = 10
         for i in range(len(self.data) - window_size):
             features = []
             for j in range(window_size):
                 record = self.data[i + j]
-                numbers = record.get('numbers', [])
-                one_hot = [0] * 49
-                for n in numbers:
-                    if 1 <= n <= 49:
-                        one_hot[n - 1] = 1
-                features.extend(one_hot)
-                features.append(sum(numbers) / 6)
-                features.append(max(numbers))
-                features.append(min(numbers))
-                features.append(sum(n % 2 for n in numbers))
-                features.append(sum(1 for n in numbers if n > 25))
+                features.extend(self._extract_window_features(record))
             X.append(features)
             next_record = self.data[i + window_size]
             label = [0] * 49
@@ -4011,58 +4070,136 @@ class MLPredictionModel:
         return np.array(X), np.array(y)
     
     def train_random_forest(self, X, y):
-        model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42, n_jobs=-1)
-        y_single = np.argmax(y, axis=1)
-        model.fit(X, y_single)
-        return model
+        """增强随机森林：200棵树 + 每数字独立分类"""
+        models = {}
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        for num_idx in range(49):
+            y_num = y[:, num_idx]
+            if len(set(y_num)) < 2:
+                models[num_idx] = None
+                continue
+            model = RandomForestClassifier(
+                n_estimators=200, max_depth=15, min_samples_split=5,
+                min_samples_leaf=2, random_state=42, n_jobs=-1
+            )
+            model.fit(X_scaled, y_num)
+            models[num_idx] = model
+        return models, scaler
     
     def train_gradient_boosting(self, X, y):
-        y_single = np.argmax(y, axis=1)
-        model = GradientBoostingClassifier(n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42)
-        model.fit(X, y_single)
-        return model
+        """增强梯度提升：200轮 + 每数字独立分类"""
+        models = {}
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        for num_idx in range(49):
+            y_num = y[:, num_idx]
+            if len(set(y_num)) < 2:
+                models[num_idx] = None
+                continue
+            model = GradientBoostingClassifier(
+                n_estimators=200, max_depth=5, learning_rate=0.05,
+                min_samples_split=5, min_samples_leaf=3, random_state=42
+            )
+            model.fit(X_scaled, y_num)
+            models[num_idx] = model
+        return models, scaler
     
     def train_neural_network(self, X, y):
+        """增强神经网络：更深架构 + 学习率衰减 + 早停"""
         torch_mod = _get_torch()
         nn = _get_nn()
         optim_mod = _get_optim()
         if torch_mod is None or nn is None:
-            return None
+            return None, None
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         X_tensor = torch_mod.FloatTensor(X_scaled)
         y_tensor = torch_mod.FloatTensor(y)
-        class LotteryNN(nn.Module):
+        
+        input_size = X.shape[1]
+        
+        class EnhancedLotteryNN(nn.Module):
             def __init__(self, input_size, output_size):
-                super(LotteryNN, self).__init__()
+                super(EnhancedLotteryNN, self).__init__()
                 self.network = nn.Sequential(
-                    nn.Linear(input_size, 128), nn.ReLU(), nn.Dropout(0.2),
-                    nn.Linear(128, 64), nn.ReLU(), nn.Dropout(0.2),
+                    nn.Linear(input_size, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.3),
+                    nn.Linear(256, 128), nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(0.3),
+                    nn.Linear(128, 64), nn.BatchNorm1d(64), nn.ReLU(), nn.Dropout(0.2),
                     nn.Linear(64, 32), nn.ReLU(),
-                    nn.Linear(32, output_size), nn.Softmax(dim=1)
+                    nn.Linear(32, output_size), nn.Sigmoid()
                 )
             def forward(self, x):
                 return self.network(x)
-        model = LotteryNN(X.shape[1], y.shape[1])
-        criterion = nn.CrossEntropyLoss()
+        
+        model = EnhancedLotteryNN(input_size, 49)
+        criterion = nn.BCELoss()
         optimizer = optim_mod.Adam(model.parameters(), lr=0.001)
+        scheduler = optim_mod.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
+        
         model.train()
-        for epoch in range(100):
+        best_loss = float('inf')
+        patience = 0
+        for epoch in range(200):
             optimizer.zero_grad()
             outputs = model(X_tensor)
-            _, labels = y_tensor.max(dim=1)
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs, y_tensor)
             loss.backward()
             optimizer.step()
-        return model
+            scheduler.step()
+            
+            # 早停
+            if loss.item() < best_loss - 1e-4:
+                best_loss = loss.item()
+                patience = 0
+            else:
+                patience += 1
+                if patience >= 20:
+                    break
+        
+        return model, scaler
+    
+    def _train_logistic_regression(self, X, y):
+        """Logistic回归：每数字独立分类"""
+        models = {}
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        for num_idx in range(49):
+            y_num = y[:, num_idx]
+            if len(set(y_num)) < 2:
+                models[num_idx] = None
+                continue
+            model = LogisticRegression(max_iter=500, C=1.0, random_state=42)
+            model.fit(X_scaled, y_num)
+            models[num_idx] = model
+        return models, scaler
+    
+    def _train_mlp_classifier(self, X, y):
+        """MLP分类器：每数字独立分类"""
+        models = {}
+        scaler = MinMaxScaler()
+        X_scaled = scaler.fit_transform(X)
+        for num_idx in range(49):
+            y_num = y[:, num_idx]
+            if len(set(y_num)) < 2:
+                models[num_idx] = None
+                continue
+            model = MLPClassifier(
+                hidden_layer_sizes=(128, 64, 32), max_iter=300,
+                learning_rate='adaptive', early_stopping=True,
+                random_state=42
+            )
+            model.fit(X_scaled, y_num)
+            models[num_idx] = model
+        return models, scaler
     
     def optimize_hyperparameters(self, X, y):
         optuna = _get_optuna()
         TPESampler = _TPESampler_class
         if optuna is None or TPESampler is None:
-            return {'n_estimators': 100, 'max_depth': 10, 'learning_rate': 0.1}
+            return {'n_estimators': 200, 'max_depth': 15, 'learning_rate': 0.05}
         def objective(trial):
-            n_estimators = trial.suggest_int('n_estimators', 50, 200)
+            n_estimators = trial.suggest_int('n_estimators', 50, 300)
             max_depth = trial.suggest_int('max_depth', 3, 15)
             learning_rate = trial.suggest_float('learning_rate', 0.01, 0.2)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -4077,53 +4214,96 @@ class MLPredictionModel:
         return study.best_params
     
     def predict_with_all_models(self):
+        """增强预测：多模型概率加权集成"""
         X, y = self.prepare_features()
         if len(X) < 20:
             return random.sample(range(1, 50), 6)
+        
+        # 构建最新特征
         latest_features = []
-        for j in range(5):
-            record = self.data[j]
-            numbers = record.get('numbers', [])
-            one_hot = [0] * 49
-            for n in numbers:
-                if 1 <= n <= 49:
-                    one_hot[n - 1] = 1
-            latest_features.extend(one_hot)
-            latest_features.append(sum(numbers) / 6)
-            latest_features.append(max(numbers))
-            latest_features.append(min(numbers))
-            latest_features.append(sum(n % 2 for n in numbers))
-            latest_features.append(sum(1 for n in numbers if n > 25))
+        for j in range(10):
+            if j < len(self.data):
+                record = self.data[j]
+                latest_features.extend(self._extract_window_features(record))
+        
         X_latest = np.array([latest_features])
-        predictions = []
+        
+        # 收集各模型的概率预测
+        all_probs = np.zeros(49)
+        model_count = 0
+        
+        # 1. Random Forest
         try:
-            rf_model = self.train_random_forest(X, y)
-            rf_pred = rf_model.predict(X_latest)[0]
-            predictions.append(rf_pred + 1)
-        except: pass
+            rf_models, rf_scaler = self.train_random_forest(X, y)
+            X_scaled = rf_scaler.transform(X_latest)
+            for num_idx in range(49):
+                if rf_models.get(num_idx) is not None:
+                    prob = rf_models[num_idx].predict_proba(X_scaled)[0]
+                    all_probs[num_idx] += prob[1] if len(prob) > 1 else prob[0]
+            model_count += 1
+        except Exception:
+            pass
+        
+        # 2. Gradient Boosting
         try:
-            gb_model = self.train_gradient_boosting(X, y)
-            gb_pred = gb_model.predict(X_latest)[0]
-            predictions.append(gb_pred + 1)
-        except: pass
+            gb_models, gb_scaler = self.train_gradient_boosting(X, y)
+            X_scaled = gb_scaler.transform(X_latest)
+            for num_idx in range(49):
+                if gb_models.get(num_idx) is not None:
+                    prob = gb_models[num_idx].predict_proba(X_scaled)[0]
+                    all_probs[num_idx] += prob[1] if len(prob) > 1 else prob[0]
+            model_count += 1
+        except Exception:
+            pass
+        
+        # 3. Logistic Regression（新增）
         try:
-            nn_model = self.train_neural_network(X, y)
+            lr_models, lr_scaler = self._train_logistic_regression(X, y)
+            X_scaled = lr_scaler.transform(X_latest)
+            for num_idx in range(49):
+                if lr_models.get(num_idx) is not None:
+                    prob = lr_models[num_idx].predict_proba(X_scaled)[0]
+                    all_probs[num_idx] += prob[1] if len(prob) > 1 else prob[0]
+            model_count += 1
+        except Exception:
+            pass
+        
+        # 4. MLP Classifier（新增）
+        try:
+            mlp_models, mlp_scaler = self._train_mlp_classifier(X, y)
+            X_scaled = mlp_scaler.transform(X_latest)
+            for num_idx in range(49):
+                if mlp_models.get(num_idx) is not None:
+                    prob = mlp_models[num_idx].predict_proba(X_scaled)[0]
+                    all_probs[num_idx] += prob[1] if len(prob) > 1 else prob[0]
+            model_count += 1
+        except Exception:
+            pass
+        
+        # 5. Neural Network (PyTorch)
+        try:
+            nn_model, nn_scaler = self.train_neural_network(X, y)
             if nn_model is not None:
-                scaler = StandardScaler()
-                X_scaled = scaler.fit_transform(X)
-                X_latest_scaled = scaler.transform(X_latest)
-                X_tensor = _torch_module.FloatTensor(X_latest_scaled)
+                torch_mod = _get_torch()
+                X_scaled = nn_scaler.transform(X_latest)
+                X_tensor = torch_mod.FloatTensor(X_scaled)
                 nn_model.eval()
-                with _torch_module.no_grad():
-                    output = nn_model(X_tensor)
-                    nn_pred = _torch_module.argmax(output, dim=1).item()
-                    predictions.append(nn_pred + 1)
-        except: pass
-        if len(predictions) >= 3:
-            counter = Counter(predictions)
-            top_pred = counter.most_common(1)[0][0]
-            return [top_pred] + random.sample([n for n in range(1, 50) if n != top_pred], 5)
-        return random.sample(range(1, 50), 6)
+                with torch_mod.no_grad():
+                    output = nn_model(X_tensor).squeeze().numpy()
+                all_probs += output
+                model_count += 1
+        except Exception:
+            pass
+        
+        # 归一化概率
+        if model_count > 0:
+            all_probs = all_probs / model_count
+        
+        # 选top6
+        top_indices = np.argsort(all_probs)[::-1][:6]
+        predictions = [idx + 1 for idx in top_indices]
+        
+        return sorted(predictions)
 
 
 # ============================================================================
@@ -4148,9 +4328,9 @@ class NumberButton(QPushButton):
     def _apply_color(self):
         colors = LotteryConfig.get_number_color(self.number)
         self.setStyleSheet(
-            "QPushButton { background-color: #FFFFFF; color: " + colors['text'] + "; border: 2px solid " + colors['border'] + "; border-radius: 8px; font-weight: bold; font-size: 16px; }" +
-            "QPushButton:hover { background-color: #F8F9FA; }" +
-            "QPushButton:checked { background-color: " + colors['text'] + "; color: #FFFFFF; }"
+            "QPushButton { background-color: #FFFFFF; color: " + colors['text'] + "; border: 2px solid " + colors['border'] + "; border-radius: 8px; font-weight: bold; font-size: 18px; min-width: 48px; min-height: 48px; }"
+            "QPushButton:hover { background-color: #F8F9FA; }"
+            "QPushButton:checked { background-color: " + colors['text'] + "; color: #FFFFFF; border: 2px solid " + colors['border'] + "; }"
         )
     
     def set_selected(self, selected):
@@ -4331,7 +4511,7 @@ class LotteryPredictionWindow(QMainWindow):
         self.margin_left = 10
         self.margin_right = 10
         self.spacing = 10
-        self.data_file = "./彩票预测系统v5/lottery_data.json"
+        self.data_file = "./彩票预测系统v6/lottery_data.json"
         self._load_data()
         self._init_ui()
         self._apply_stylesheet()
@@ -4346,6 +4526,8 @@ class LotteryPredictionWindow(QMainWindow):
         self._create_top_bar(main_layout)
         self._create_tabs(main_layout)
         self._create_status_bar()
+        # 加载数据后刷新界面
+        self._update_history_table()
     
     def _create_top_bar(self, parent_layout):
         top_bar = QWidget()
@@ -4502,14 +4684,20 @@ class LotteryPredictionWindow(QMainWindow):
         tab1 = self._create_data_import_tab()
         self.tabs.addTab(tab1, "数据导入与格式转换")
         
-        tab2 = self._create_prediction_tab()
-        self.tabs.addTab(tab2, "预测与抽取")
+        tab2 = self._create_history_tab()
+        self.tabs.addTab(tab2, "历史记录")
         
-        tab3 = self._create_seventh_prediction_tab()
-        self.tabs.addTab(tab3, "第七位预判")
+        tab3 = self._create_prediction_tab()
+        self.tabs.addTab(tab3, "预测与抽取")
         
-        tab4 = self._create_statistics_chart_tab()
-        self.tabs.addTab(tab4, "统计分析图表")
+        tab4 = self._create_number_selection_tab()
+        self.tabs.addTab(tab4, "数字选择")
+        
+        tab5 = self._create_seventh_prediction_tab()
+        self.tabs.addTab(tab5, "第七位预判")
+        
+        tab6 = self._create_statistics_chart_tab()
+        self.tabs.addTab(tab6, "统计分析图表")
         
         parent_layout.addWidget(self.tabs)
     
@@ -4581,6 +4769,7 @@ class LotteryPredictionWindow(QMainWindow):
         widget.setObjectName("ResultPanel")
         layout = QVBoxLayout(widget)
         layout.setSpacing(self.spacing)
+        layout.setContentsMargins(self.margin_left, self.margin_top, self.margin_right, self.margin_bottom)
         
         title = QLabel("转换结果")
         title.setObjectName("PanelTitle")
@@ -4590,18 +4779,6 @@ class LotteryPredictionWindow(QMainWindow):
         self.converted_text_edit.setObjectName("ConvertedTextEdit")
         self.converted_text_edit.setReadOnly(True)
         layout.addWidget(self.converted_text_edit)
-        
-        history_title = QLabel("历史记录")
-        history_title.setObjectName("PanelTitle")
-        layout.addWidget(history_title)
-        
-        self.history_table = QTableWidget()
-        self.history_table.setObjectName("HistoryTable")
-        self.history_table.setColumnCount(4)
-        self.history_table.setHorizontalHeaderLabels(["期号", "日期", "正码", "特别码"])
-        self.history_table.horizontalHeader().setStretchLastSection(True)
-        self.history_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        layout.addWidget(self.history_table)
         
         return widget
     
@@ -4635,11 +4812,11 @@ class LotteryPredictionWindow(QMainWindow):
         latest_panel = self._create_latest_data_panel()
         v_splitter.addWidget(latest_panel)
         
-        selection_panel = self._create_selection_panel()
-        v_splitter.addWidget(selection_panel)
+        algorithm_panel = self._create_algorithm_panel()
+        v_splitter.addWidget(algorithm_panel)
         
         v_splitter.setStretchFactor(0, 1)
-        v_splitter.setStretchFactor(1, 3)
+        v_splitter.setStretchFactor(1, 2)
         
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -4654,18 +4831,14 @@ class LotteryPredictionWindow(QMainWindow):
         v_splitter = QSplitter(Qt.Orientation.Vertical)
         v_splitter.setHandleWidth(2)
         
-        algorithm_panel = self._create_algorithm_panel()
-        v_splitter.addWidget(algorithm_panel)
-        
         result_panel = self._create_prediction_result_panel()
         v_splitter.addWidget(result_panel)
         
         data_manage_panel = self._create_data_manage_panel()
         v_splitter.addWidget(data_manage_panel)
         
-        v_splitter.setStretchFactor(0, 1)
-        v_splitter.setStretchFactor(1, 2)
-        v_splitter.setStretchFactor(2, 1)
+        v_splitter.setStretchFactor(0, 2)
+        v_splitter.setStretchFactor(1, 1)
         
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -4696,11 +4869,198 @@ class LotteryPredictionWindow(QMainWindow):
         
         return widget
     
-    def _create_selection_panel(self):
+    def _create_history_tab(self):
         widget = QWidget()
-        widget.setObjectName("SelectionPanel")
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(0)
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        # 标题行
+        header_layout = QHBoxLayout()
+        title = QLabel("历史记录")
+        title.setObjectName("PanelTitle")
+        header_layout.addWidget(title)
+        
+        self.history_count_label = QLabel("")
+        self.history_count_label.setStyleSheet("color: #555555; font-size: 14px;")
+        header_layout.addWidget(self.history_count_label)
+        header_layout.addStretch()
+        
+        refresh_btn = QPushButton("刷新")
+        refresh_btn.clicked.connect(self._update_history_table)
+        header_layout.addWidget(refresh_btn)
+        
+        layout.addLayout(header_layout)
+        
+        # 外层水平Splitter（左右分隔）
+        h_splitter = QSplitter(Qt.Orientation.Horizontal)
+        h_splitter.setHandleWidth(4)
+        
+        # === 左半部分：垂直Splitter（上下分隔）===
+        left_v_splitter = QSplitter(Qt.Orientation.Vertical)
+        left_v_splitter.setHandleWidth(4)
+        
+        # 上方：最新开奖数据
+        latest_widget = QWidget()
+        latest_layout = QVBoxLayout(latest_widget)
+        latest_layout.setSpacing(5)
+        
+        latest_title = QLabel("最新开奖数据")
+        latest_title.setObjectName("PanelTitle")
+        latest_layout.addWidget(latest_title)
+        
+        self.history_latest_display = QLabel("暂无数据")
+        self.history_latest_display.setObjectName("LatestDisplay")
+        self.history_latest_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.history_latest_display.setWordWrap(True)
+        latest_layout.addWidget(self.history_latest_display)
+        
+        left_v_splitter.addWidget(latest_widget)
+        
+        # 下方：历史记录表格
+        table_widget = QWidget()
+        table_layout = QVBoxLayout(table_widget)
+        table_layout.setSpacing(0)
+        table_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.history_table = QTableWidget()
+        self.history_table.setObjectName("HistoryTable")
+        self.history_table.setColumnCount(9)
+        self.history_table.setHorizontalHeaderLabels(["期号", "日期", "正码", "特别码", "和值", "单双比", "大小比", "颜色分布", "跨度"])
+        
+        # 列宽设置：Interactive模式支持用户拖拽调整列宽
+        self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        # 各列初始宽度，足够完整显示内容
+        col_widths = [70, 120, 160, 70, 60, 65, 65, 110, 60]
+        for i, w in enumerate(col_widths):
+            self.history_table.setColumnWidth(i, w)
+        self.history_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        # 确保水平和垂直滚动条都能正常出现
+        self.history_table.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        self.history_table.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.history_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # 行高加大确保内容完整
+        self.history_table.verticalHeader().setDefaultSectionSize(40)
+        # 确保文字不被截断
+        self.history_table.setWordWrap(True)
+        
+        table_layout.addWidget(self.history_table)
+        
+        left_v_splitter.addWidget(table_widget)
+        
+        # 左半部分比例：最新数据20%，表格80%
+        left_v_splitter.setStretchFactor(0, 2)
+        left_v_splitter.setStretchFactor(1, 8)
+        
+        h_splitter.addWidget(left_v_splitter)
+        
+        # === 右半部分：垂直Splitter（上下分隔）===
+        right_v_splitter = QSplitter(Qt.Orientation.Vertical)
+        right_v_splitter.setHandleWidth(4)
+        
+        # 上方：快捷操作面板（小按钮网格布局）
+        action_widget = QWidget()
+        action_layout = QVBoxLayout(action_widget)
+        action_layout.setSpacing(6)
+        action_layout.setContentsMargins(4, 4, 4, 4)
+        
+        action_title = QLabel("快捷操作")
+        action_title.setObjectName("PanelTitle")
+        action_layout.addWidget(action_title)
+        
+        # 网格布局：4列小按钮
+        grid_widget = QWidget()
+        grid_layout = QGridLayout(grid_widget)
+        grid_layout.setSpacing(5)
+        grid_layout.setContentsMargins(0, 0, 0, 0)
+        
+        small_btn_style = (
+            "QPushButton { background-color: #FFFFFF; color: #333333; border: 1px solid #DDDDDD; "
+            "border-radius: 4px; padding: 4px 8px; font-size: 12px; font-weight: bold; min-height: 26px; } "
+            "QPushButton:hover { background-color: #F0F0F0; border-color: #BBBBBB; } "
+            "QPushButton:pressed { background-color: #E0E0E0; }"
+        )
+        danger_btn_style = (
+            "QPushButton { background-color: #FFFFFF; color: #E74C3C; border: 1px solid #E74C3C; "
+            "border-radius: 4px; padding: 4px 8px; font-size: 12px; font-weight: bold; min-height: 26px; } "
+            "QPushButton:hover { background-color: #FDF0EF; } "
+            "QPushButton:pressed { background-color: #FADBD8; }"
+        )
+        
+        quick_actions = [
+            ("📥 导入", small_btn_style, self._on_import_clicked),
+            ("📤 导出", small_btn_style, self._on_export_clicked),
+            ("💾 保存", small_btn_style, self._on_save_clicked),
+            ("➕ 添加", small_btn_style, self._on_add_data_clicked),
+            ("🗑 删除", danger_btn_style, self._on_delete_data_clicked),
+            ("⚠ 清空", danger_btn_style, self._on_clear_data_clicked),
+            ("📋 批量导入", small_btn_style, self._on_batch_import_clicked),
+        ]
+        
+        cols = 4
+        for i, (text, style, callback) in enumerate(quick_actions):
+            btn = QPushButton(text)
+            btn.setStyleSheet(style)
+            btn.clicked.connect(callback)
+            grid_layout.addWidget(btn, i // cols, i % cols)
+        
+        action_layout.addWidget(grid_widget)
+        action_layout.addStretch()
+        
+        right_v_splitter.addWidget(action_widget)
+        
+        # 下方：期号详情显示面板
+        detail_widget = QWidget()
+        detail_layout = QVBoxLayout(detail_widget)
+        detail_layout.setSpacing(5)
+        
+        detail_title_row = QHBoxLayout()
+        detail_title = QLabel("期号详情")
+        detail_title.setObjectName("PanelTitle")
+        detail_title_row.addWidget(detail_title)
+        detail_title_row.addStretch()
+        
+        show_btn = QPushButton("显示选中")
+        show_btn.clicked.connect(self._on_show_period_detail)
+        show_btn.setStyleSheet("QPushButton { background-color: #2ECC71; color: white; border: none; border-radius: 4px; padding: 5px 12px; font-weight: bold; } QPushButton:hover { background-color: #27AE60; }")
+        detail_title_row.addWidget(show_btn)
+        
+        detail_layout.addLayout(detail_title_row)
+        
+        self.period_detail_edit = QTextEdit()
+        self.period_detail_edit.setReadOnly(True)
+        self.period_detail_edit.setStyleSheet("QTextEdit { background-color: #FFFFFF; color: #000000; border: 1px solid #DDDDDD; border-radius: 4px; font-size: 14px; padding: 8px; }")
+        self.period_detail_edit.setPlaceholderText("在表格中选择一期，然后点击「显示选中」按钮查看完整信息...")
+        detail_layout.addWidget(self.period_detail_edit)
+        
+        # 统计摘要
+        self.history_stats_label = QLabel("加载数据后显示统计信息")
+        self.history_stats_label.setWordWrap(True)
+        self.history_stats_label.setStyleSheet("color: #333333; font-size: 13px; line-height: 1.5;")
+        detail_layout.addWidget(self.history_stats_label)
+        
+        right_v_splitter.addWidget(detail_widget)
+        
+        # 右半部分比例：操作60%，统计40%
+        right_v_splitter.setStretchFactor(0, 6)
+        right_v_splitter.setStretchFactor(1, 4)
+        
+        h_splitter.addWidget(right_v_splitter)
+        
+        # 左右比例：左侧80%，右侧20%
+        h_splitter.setStretchFactor(0, 8)
+        h_splitter.setStretchFactor(1, 2)
+        
+        layout.addWidget(h_splitter)
+        
+        return widget
+    
+    def _create_number_selection_tab(self):
+        widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(self.spacing)
+        layout.setContentsMargins(self.margin_left, self.margin_top, self.margin_right, self.margin_bottom)
         
         title = QLabel("数字选择面板（49个数字）")
         title.setObjectName("PanelTitle")
@@ -4717,19 +5077,49 @@ class LotteryPredictionWindow(QMainWindow):
         
         layout.addWidget(scroll, 1)
         
+        # 颜色图例（保留原有的三列颜色图例）
+        legend_widget = QWidget()
+        legend_layout = QHBoxLayout(legend_widget)
+        legend_layout.setSpacing(15)
+        legend_layout.setContentsMargins(5, 2, 5, 2)
+        
+        red_label = QLabel("纯红色")
+        red_label.setStyleSheet("color: #FF0000; font-size: 14px; font-weight: bold;")
+        red_nums = QLabel("01 02 07 08 12 13 18 19 23 24 29 30 34 35 40 45 46")
+        red_nums.setStyleSheet("color: #FF0000; font-size: 13px;")
+        red_nums.setWordWrap(True)
+        legend_layout.addWidget(red_label)
+        legend_layout.addWidget(red_nums, 1)
+        
+        blue_label = QLabel("纯蓝色")
+        blue_label.setStyleSheet("color: #0000FF; font-size: 14px; font-weight: bold;")
+        blue_nums = QLabel("03 04 09 10 14 15 20 25 26 31 36 37 41 42 47 48")
+        blue_nums.setStyleSheet("color: #0000FF; font-size: 13px;")
+        blue_nums.setWordWrap(True)
+        legend_layout.addWidget(blue_label)
+        legend_layout.addWidget(blue_nums, 1)
+        
+        green_label = QLabel("深绿色")
+        green_label.setStyleSheet("color: #008000; font-size: 14px; font-weight: bold;")
+        green_nums = QLabel("05 06 11 16 17 21 22 27 28 32 33 38 39 43 44 49")
+        green_nums.setStyleSheet("color: #008000; font-size: 13px;")
+        green_nums.setWordWrap(True)
+        legend_layout.addWidget(green_label)
+        legend_layout.addWidget(green_nums, 1)
+        
+        layout.addWidget(legend_widget)
+        
+        # 已选数字
         selected_layout = QHBoxLayout()
         selected_label = QLabel("已选数字:")
         selected_layout.addWidget(selected_label)
-        
         self.selected_numbers_label = QLabel("无")
         self.selected_numbers_label.setObjectName("SelectedNumbersLabel")
         selected_layout.addWidget(self.selected_numbers_label)
         selected_layout.addStretch()
-        
         clear_btn = QPushButton("清除")
         clear_btn.clicked.connect(self._clear_number_selection)
         selected_layout.addWidget(clear_btn)
-        
         layout.addLayout(selected_layout)
         
         return widget
@@ -5548,23 +5938,101 @@ class LotteryPredictionWindow(QMainWindow):
     def _update_history_table(self):
         self.history_table.setRowCount(len(self.historical_data))
         for i, record in enumerate(self.historical_data):
+            # 期号
             item_period = QTableWidgetItem(str(record.get('period', '?')))
             item_period.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.history_table.setItem(i, 0, item_period)
+            # 日期
             item_date = QTableWidgetItem(record.get('date', '?'))
             item_date.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.history_table.setItem(i, 1, item_date)
+            # 正码
             numbers = record.get('numbers', [])
             numbers_str = ' '.join(str(n).zfill(2) for n in numbers)
             item_numbers = QTableWidgetItem(numbers_str)
             item_numbers.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.history_table.setItem(i, 2, item_numbers)
+            # 特别码（带颜色标记）
             special = record.get('special', '?')
             item_special = QTableWidgetItem(str(special).zfill(2) if special != '?' else '?')
             item_special.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            special_color = "#000000"
+            if isinstance(special, int):
+                if special in LotteryConfig.RED_NUMBERS:
+                    special_color = "#FF0000"
+                elif special in LotteryConfig.BLUE_NUMBERS:
+                    special_color = "#0000FF"
+                else:
+                    special_color = "#008000"
+            item_special.setForeground(QColor(special_color))
             self.history_table.setItem(i, 3, item_special)
+            # 和值
+            sum_val = sum(numbers) if numbers else 0
+            item_sum = QTableWidgetItem(str(sum_val))
+            item_sum.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.history_table.setItem(i, 4, item_sum)
+            # 单双比
+            odd_count = sum(1 for n in numbers if n % 2 == 1) if numbers else 0
+            even_count = len(numbers) - odd_count
+            item_oe = QTableWidgetItem(str(odd_count) + ':' + str(even_count))
+            item_oe.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.history_table.setItem(i, 5, item_oe)
+            # 大小比
+            big_count = sum(1 for n in numbers if n > 24) if numbers else 0
+            small_count = len(numbers) - big_count
+            item_bs = QTableWidgetItem(str(big_count) + ':' + str(small_count))
+            item_bs.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.history_table.setItem(i, 6, item_bs)
+            # 颜色分布
+            red_count = sum(1 for n in numbers if n in LotteryConfig.RED_NUMBERS) if numbers else 0
+            blue_count = sum(1 for n in numbers if n in LotteryConfig.BLUE_NUMBERS) if numbers else 0
+            green_count = len(numbers) - red_count - blue_count
+            item_color = QTableWidgetItem('红' + str(red_count) + '蓝' + str(blue_count) + '绿' + str(green_count))
+            item_color.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.history_table.setItem(i, 7, item_color)
+            # 跨度
+            span_val = (max(numbers) - min(numbers)) if numbers else 0
+            item_span = QTableWidgetItem(str(span_val))
+            item_span.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.history_table.setItem(i, 8, item_span)
         self.data_count_label.setText("历史记录: " + str(len(self.historical_data)) + " 条")
+        if hasattr(self, 'history_count_label'):
+            self.history_count_label.setText("共 " + str(len(self.historical_data)) + " 条记录")
         self._refresh_latest_display()
+        
+        # 更新历史记录标签页的最新数据显示
+        if hasattr(self, 'history_latest_display') and self.historical_data:
+            latest = self.historical_data[0]
+            numbers = latest.get('numbers', [])
+            special = latest.get('special', 0)
+            text = '第' + str(latest.get('period', '?')) + '期 | ' + str(latest.get('date', '?'))
+            text += '\n正码: ' + ' '.join(str(n).zfill(2) for n in numbers)
+            text += '  特别码: ' + str(special).zfill(2)
+            self.history_latest_display.setText(text)
+        
+        # 更新统计摘要
+        if hasattr(self, 'history_stats_label') and self.historical_data:
+            from collections import Counter
+            all_nums = []
+            for r in self.historical_data:
+                all_nums.extend(r.get('numbers', []))
+            counter = Counter(all_nums)
+            hot = counter.most_common(5)
+            hot_str = '  '.join(str(n).zfill(2) + '(' + str(c) + ')' for n, c in hot)
+            cold = counter.most_common()[-5:]
+            cold_str = '  '.join(str(n).zfill(2) + '(' + str(c) + ')' for n, c in cold)
+            
+            sums = [sum(r.get('numbers', [])) for r in self.historical_data]
+            dates = [r.get('date', '') for r in self.historical_data if r.get('date')]
+            
+            stats_text = '总期数: ' + str(len(self.historical_data)) + ' 期\n'
+            if dates:
+                stats_text += '日期范围: ' + dates[-1] + ' ~ ' + dates[0] + '\n'
+            stats_text += '和值范围: ' + str(min(sums)) + ' ~ ' + str(max(sums)) + '\n'
+            stats_text += '和值均值: ' + str(int(sum(sums) / len(sums))) + '\n'
+            stats_text += '热门号码: ' + hot_str + '\n'
+            stats_text += '冷门号码: ' + cold_str
+            self.history_stats_label.setText(stats_text)
     
     def _on_number_selected(self, numbers):
         if numbers:
@@ -5587,63 +6055,77 @@ class LotteryPredictionWindow(QMainWindow):
         if len(self.historical_data) < 10:
             QMessageBox.warning(self, "数据不足", "历史数据不足10条，请先添加更多数据")
             return
-        predictor = PredictionAlgorithms(self.historical_data)
-        algorithm_index = self.current_algorithm_index
-        if algorithm_index == 0:
-            predictions = predictor.comprehensive_recommendation(6)
-        elif algorithm_index == 1:
-            predictions = predictor.hot_cold_algorithm(6)
-        elif algorithm_index == 2:
-            predictions = predictor.odd_even_algorithm(6)
-        elif algorithm_index == 3:
-            predictions = predictor.big_small_algorithm(6)
-        elif algorithm_index == 4:
-            predictions = predictor.missing_value_analysis(6)
-        elif algorithm_index == 5:
-            predictions = predictor.adjacent_number_analysis(6)
-        elif algorithm_index == 6:
-            predictions = predictor.tail_distribution_algorithm(6)
-        elif algorithm_index == 7:
-            predictions = predictor.range_distribution_algorithm(6)
-        elif algorithm_index == 8:
-            predictions = predictor.roulette_selection(6)
-        elif algorithm_index == 9:
-            predictions = predictor.historical_similarity(6)
-        elif algorithm_index == 10:
-            predictions = predictor.poisson_distribution(6)
-        elif algorithm_index == 11:
-            predictions = predictor.mystical_algorithm(6)
-        elif algorithm_index == 12:
-            predictions = predictor.number_graph_algorithm(6)
-        elif algorithm_index == 13:
-            predictions = predictor.shortest_path_algorithm(6)
-        elif algorithm_index == 14:
-            predictions = predictor.community_detection_algorithm(6)
-        elif algorithm_index == 15:
-            predictions = predictor.graph_clustering_algorithm(6)
-        elif algorithm_index == 16:
-            predictions = predictor.numpy_matrix_algorithm(6)
-        elif algorithm_index == 17:
-            predictions = predictor.scipy_optimization_algorithm(6)
-        elif algorithm_index == 18:
-            predictions = predictor.sklearn_ensemble_algorithm(6)
-        elif algorithm_index == 19:
-            predictions = predictor.pytorch_deep_learning_algorithm(6)
-        elif algorithm_index == 20:
-            predictions = predictor.networkx_graph_algorithm(6)
-        else:
-            predictions = predictor.comprehensive_recommendation(6)
-        self._display_predictions(predictions)
-        self.statusBar().showMessage("预测完成")
+        try:
+            predictor = PredictionAlgorithms(self.historical_data)
+            algorithm_index = self.current_algorithm_index
+            if algorithm_index == 0:
+                predictions = predictor.comprehensive_recommendation(6)
+            elif algorithm_index == 1:
+                predictions = predictor.hot_cold_algorithm(6)
+            elif algorithm_index == 2:
+                predictions = predictor.odd_even_algorithm(6)
+            elif algorithm_index == 3:
+                predictions = predictor.big_small_algorithm(6)
+            elif algorithm_index == 4:
+                predictions = predictor.missing_value_analysis(6)
+            elif algorithm_index == 5:
+                predictions = predictor.adjacent_number_analysis(6)
+            elif algorithm_index == 6:
+                predictions = predictor.tail_distribution_algorithm(6)
+            elif algorithm_index == 7:
+                predictions = predictor.range_distribution_algorithm(6)
+            elif algorithm_index == 8:
+                predictions = predictor.roulette_selection(6)
+            elif algorithm_index == 9:
+                predictions = predictor.historical_similarity(6)
+            elif algorithm_index == 10:
+                predictions = predictor.poisson_distribution(6)
+            elif algorithm_index == 11:
+                predictions = predictor.mystical_algorithm(6)
+            elif algorithm_index == 12:
+                predictions = predictor.number_graph_algorithm(6)
+            elif algorithm_index == 13:
+                predictions = predictor.shortest_path_algorithm(6)
+            elif algorithm_index == 14:
+                predictions = predictor.community_detection_algorithm(6)
+            elif algorithm_index == 15:
+                predictions = predictor.graph_clustering_algorithm(6)
+            elif algorithm_index == 16:
+                predictions = predictor.numpy_matrix_algorithm(6)
+            elif algorithm_index == 17:
+                predictions = predictor.scipy_optimization_algorithm(6)
+            elif algorithm_index == 18:
+                predictions = predictor.sklearn_ensemble_algorithm(6)
+            elif algorithm_index == 19:
+                predictions = predictor.pytorch_deep_learning_algorithm(6)
+            elif algorithm_index == 20:
+                predictions = predictor.networkx_graph_algorithm(6)
+            else:
+                predictions = predictor.comprehensive_recommendation(6)
+            self._display_predictions(predictions)
+            self.statusBar().showMessage("预测完成")
+        except Exception as e:
+            import traceback
+            error_msg = str(e)
+            traceback.print_exc()
+            QMessageBox.warning(self, "预测错误", "预测过程出错:\n" + error_msg)
+            self.statusBar().showMessage("预测失败")
     
     def _on_random_draw_clicked(self):
-        if len(self.historical_data) < 10:
-            predictor = PredictionAlgorithms([])
-        else:
-            predictor = PredictionAlgorithms(self.historical_data)
-        predictions = predictor.roulette_selection(6)
-        self._display_predictions(predictions)
-        self.statusBar().showMessage("随机抽取完成")
+        try:
+            if len(self.historical_data) < 10:
+                predictor = PredictionAlgorithms([])
+            else:
+                predictor = PredictionAlgorithms(self.historical_data)
+            predictions = predictor.roulette_selection(6)
+            self._display_predictions(predictions)
+            self.statusBar().showMessage("随机抽取完成")
+        except Exception as e:
+            import traceback
+            error_msg = str(e)
+            traceback.print_exc()
+            QMessageBox.warning(self, "随机抽取错误", "随机抽取过程出错:\n" + error_msg)
+            self.statusBar().showMessage("随机抽取失败")
     
     def _on_ml_predict_clicked(self):
         if len(self.historical_data) < 20:
@@ -5655,7 +6137,10 @@ class LotteryPredictionWindow(QMainWindow):
             self._display_predictions(predictions)
             self.statusBar().showMessage("机器学习预测完成")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             QMessageBox.warning(self, "错误", "机器学习预测失败: " + str(e))
+            self.statusBar().showMessage("机器学习预测失败")
     
     def _display_predictions(self, predictions):
         sorted_preds = sorted(predictions)
@@ -5695,6 +6180,134 @@ class LotteryPredictionWindow(QMainWindow):
         text += "正码: " + numbers_text + "\n"
         text += "特别码: " + str(special).zfill(2)
         self.latest_display.setText(text)
+    
+    def _on_show_period_detail(self):
+        """显示选中期的完整信息"""
+        if not hasattr(self, 'period_detail_edit'):
+            return
+        row = self.history_table.currentRow()
+        if row < 0 or row >= len(self.historical_data):
+            self.period_detail_edit.setHtml('<p style="color:#E74C3C;">请先在表格中选择一期记录</p>')
+            return
+        
+        record = self.historical_data[row]
+        numbers = record.get('numbers', [])
+        special = record.get('special', 0)
+        period = record.get('period', '?')
+        date = record.get('date', '?')
+        
+        # 构建HTML完整显示
+        html = '<div style="font-size:18px; line-height:2.2;">'
+        html += '<p style="font-size:24px; font-weight:bold; color:#3498DB;">第' + str(period) + '期  ' + str(date) + '</p>'
+        
+        # 正码大按钮显示
+        html += '<p style="font-size:20px;"><b>正码：</b></p>'
+        html += '<p style="margin-left:10px;">'
+        for n in numbers:
+            colors = LotteryConfig.get_number_color(n)
+            html += '<span style="display:inline-block; background-color:' + colors['border'] + '; color:#000000; font-size:24px; font-weight:bold; border-radius:10px; padding:8px 14px; margin:4px;">' + str(n).zfill(2) + '</span> '
+        html += '</p>'
+        
+        # 特别码
+        html += '<p><b>特别码：</b>'
+        sp_colors = LotteryConfig.get_number_color(special)
+        sp_name = LotteryConfig.NUMBER_NAMES.get(special, '')
+        sp_elem = LotteryConfig.NUMBER_ELEMENTS.get(special, '')
+        sp_color_name = ''
+        if special in LotteryConfig.RED_NUMBERS:
+            sp_color_name = '红'
+        elif special in LotteryConfig.BLUE_NUMBERS:
+            sp_color_name = '蓝'
+        else:
+            sp_color_name = '绿'
+        html += '<span style="display:inline-block; background-color:' + sp_colors['border'] + '; color:#000000; font-size:24px; font-weight:bold; border-radius:10px; padding:8px 14px; margin:4px;">' + str(special).zfill(2) + '</span>'
+        html += '</p>'
+        
+        # 详细属性表
+        html += '<table style="border-collapse:collapse; width:100%; margin-top:8px; font-size:16px;">'
+        
+        # 和值
+        sum_val = sum(numbers)
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold; width:90px;">和值</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px; font-weight:bold;">' + str(sum_val) + '</td></tr>'
+        
+        # 跨度
+        span_val = max(numbers) - min(numbers) if numbers else 0
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">跨度</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:18px; font-weight:bold;">' + str(span_val) + '</td></tr>'
+        
+        # 单双比
+        odd_count = sum(1 for n in numbers if n % 2 == 1)
+        even_count = len(numbers) - odd_count
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">单双比</td><td style="padding:6px 10px; border:1px solid #DDD;">单' + str(odd_count) + ':双' + str(even_count) + '</td></tr>'
+        
+        # 大小比
+        big_count = sum(1 for n in numbers if n > 24)
+        small_count = len(numbers) - big_count
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">大小比</td><td style="padding:6px 10px; border:1px solid #DDD;">大' + str(big_count) + ':小' + str(small_count) + '</td></tr>'
+        
+        # 颜色分布
+        red_c = sum(1 for n in numbers if n in LotteryConfig.RED_NUMBERS)
+        blue_c = sum(1 for n in numbers if n in LotteryConfig.BLUE_NUMBERS)
+        green_c = len(numbers) - red_c - blue_c
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">颜色分布</td><td style="padding:6px 10px; border:1px solid #DDD;"><span style="color:#FF0000; font-size:18px;">红' + str(red_c) + '</span> <span style="color:#0000FF; font-size:18px;">蓝' + str(blue_c) + '</span> <span style="color:#008000; font-size:18px;">绿' + str(green_c) + '</span></td></tr>'
+        
+        # 每个号码详细属性
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">号码详情</td><td style="padding:6px 10px; border:1px solid #DDD;">'
+        for n in numbers:
+            cn = LotteryConfig.NUMBER_NAMES.get(n, '')
+            el = LotteryConfig.NUMBER_ELEMENTS.get(n, '')
+            c = LotteryConfig.get_number_color(n)
+            cn2 = ''
+            if n in LotteryConfig.RED_NUMBERS:
+                cn2 = '红'
+            elif n in LotteryConfig.BLUE_NUMBERS:
+                cn2 = '蓝'
+            else:
+                cn2 = '绿'
+            html += '<span style="color:' + c['text'] + '; font-size:20px; font-weight:bold;">' + str(n).zfill(2) + '</span><span style="font-size:15px;">(' + cn2 + '/' + cn + '/' + el + ')</span> '
+        # 特别码详情
+        sp_c = LotteryConfig.get_number_color(special)
+        html += '<br>特别码: <span style="color:' + sp_c['text'] + '; font-size:20px; font-weight:bold;">' + str(special).zfill(2) + '</span><span style="font-size:15px;">(' + sp_color_name + '/' + sp_name + '/' + sp_elem + ')</span>'
+        html += '</td></tr>'
+        
+        # 区间分布
+        zones = {'01-10': 0, '11-20': 0, '21-30': 0, '31-40': 0, '41-49': 0}
+        for n in numbers:
+            if n <= 10: zones['01-10'] += 1
+            elif n <= 20: zones['11-20'] += 1
+            elif n <= 30: zones['21-30'] += 1
+            elif n <= 40: zones['31-40'] += 1
+            else: zones['41-49'] += 1
+        zone_str = '  '.join(k + ':' + str(v) for k, v in zones.items())
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">区间分布</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:16px;">' + zone_str + '</td></tr>'
+        
+        # 尾数分布
+        tails = [n % 10 for n in numbers]
+        tail_counter = {}
+        for t in tails:
+            tail_counter[t] = tail_counter.get(t, 0) + 1
+        tail_str = '  '.join('尾' + str(k) + ':' + str(v) for k, v in sorted(tail_counter.items()))
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">尾数分布</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:16px;">' + tail_str + '</td></tr>'
+        
+        # 连号
+        sorted_nums = sorted(numbers)
+        consec = []
+        temp = [sorted_nums[0]]
+        for j in range(1, len(sorted_nums)):
+            if sorted_nums[j] == sorted_nums[j-1] + 1:
+                temp.append(sorted_nums[j])
+            else:
+                if len(temp) >= 2:
+                    consec.append(temp[:])
+                temp = [sorted_nums[j]]
+        if len(temp) >= 2:
+            consec.append(temp[:])
+        consec_str = '  '.join('-'.join(str(x).zfill(2) for x in c) for c in consec) if consec else '无'
+        html += '<tr><td style="padding:6px 10px; border:1px solid #DDD; font-weight:bold;">连号</td><td style="padding:6px 10px; border:1px solid #DDD; font-size:16px;">' + consec_str + '</td></tr>'
+        
+        html += '</table>'
+        html += '</div>'
+        
+        self.period_detail_edit.setHtml(html)
 
 
 # ============================================================================
